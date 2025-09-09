@@ -121,7 +121,6 @@ def save_metrics(path, exp_setting, output_path, model):
     info = read_info(os.path.join(path, 'output_metrics_features.json'))
     info_sum['tempo_train'] = info[model]['tempo_train']
     write_info(os.path.join(output_path, 'metrics.json'), info_sum)
-    # os.system(f"mv {os.path.join(path, 'output_metrics_features.json')} '{output_path}'")
 
 def save_training_setting(path, file, exp_setting, output_path, model):
     bef_path = os.path.join(path, f'output_{model}', file, "splatfacto")
@@ -143,25 +142,32 @@ def reset_training(path, model):
     if os.path.exists(os.path.join(path, f'output_{model}')):
         os.system(f"rm -rf {os.path.join(path, f'output_{model}')}")
 
-def run_command(path, tipe:str, es: bool, rae: int, re: int, mi: int, model: str, frames_number: int=None, df: int = 4):
+def get_splat_big_num_gaussians(output_path, exp_setting):
+    output_path = os.path.join(output_path, exp_setting)
+    info = read_info(os.path.join(output_path, 'metrics.json'))
+    num_gaussians = info["30000"]['num_gaussians']
+    return int(num_gaussians)
+
+def run_command(path, tipe:str, es: bool, rae: int, re: int, mi: int, model: str, frames_number: int=None, df: int = 4, num_gs:int = None):
+    if num_gs is None:
+        num_gs = 5000000
     if frames_number is not None:
         if es:
-            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number} -mg {num_gs}")
         else:
-            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number} -mg {num_gs}")
     else:
         if es:
-            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -mg {num_gs}")
         else:
-            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -mg {num_gs}")
 
-def pipeline(path, tipe:str, es: bool, rae: int, re: int, mi: int, output_path: str, checks: list, model: str, frames_number: int=None, df: int=4):
-    exp_setting = f'num-iterations_{mi//1000}k enhanced-splatfacto_{str(es)} reset-alpha-every_{rae} refine-every_{re}'
+def pipeline(path, exp_setting: str, tipe:str, es: bool, rae: int, re: int, mi: int, output_path: str, checks: list, model: str, frames_number: int=None, df: int=4, num_gs:int = None):
     for folder in os.listdir(path):
         try:
             folder_path = os.path.join(path, folder)
             reset_training(folder_path, model)
-            run_command(path, tipe, es, rae, re, mi, model, frames_number, df)
+            run_command(path, tipe, es, rae, re, mi, model, frames_number, df, num_gs)
             render(folder_path, folder, checks, exp_setting, output_path, model)
             save_metrics(folder_path, exp_setting, output_path, model)
             get_num_gaussians(folder_path, folder, checks, exp_setting, output_path, model)
@@ -170,7 +176,6 @@ def pipeline(path, tipe:str, es: bool, rae: int, re: int, mi: int, output_path: 
             print(f'Error {e}')
         sleep(60.0 * 5.0)
 
-models = ['splatfacto-big', 'splatfacto-mcmc']
 enhanceds = [False, True]
 reset_alpha_every_num_iterations = 3000
 frames_numbers = [None, 500, 500]
@@ -196,14 +201,27 @@ big_output_paths = [
 for tipe, frames_number, path, big_output_path in zip(tipes, frames_numbers, paths, big_output_paths):
     os.makedirs(big_output_path, exist_ok=True)
     
-    for model in models:
-        for enhanced in enhanceds:
-            if model == 'splatfacto-mcmc' and enhanced:
-                pass
-            else:
-                output_path = os.path.join(big_output_path, f'{model} bilateral_{enhanced}') 
-                os.makedirs(output_path, exist_ok=True)
+    # Splatfacto-big
+    model = 'splatfacto-big'
+    for enhanced in enhanceds:
+        output_path = os.path.join(big_output_path, f'{model} bilateral_{enhanced}') 
+        os.makedirs(output_path, exist_ok=True)
 
-                for re in res:
-                    rae = reset_alpha_every_num_iterations // re
-                    pipeline(path=path, tipe=tipe, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model, df=downscale_factor)
+        for re in res:
+            exp_setting = f'num-iterations_{num_iterations//1000}k enhanced-splatfacto_{str(enhanced)} reset-alpha-every_{rae} refine-every_{re}'
+            rae = reset_alpha_every_num_iterations // re
+            pipeline(path=path, exp_setting=exp_setting, tipe=tipe, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model, df=downscale_factor, num_gs=None)
+    
+    # Splatfacto-mcmc
+    model = 'splatfacto-mcmc'
+    enhanced = False
+    output_path = os.path.join(big_output_path, f'{model} bilateral_{enhanced}') 
+    os.makedirs(output_path, exist_ok=True)
+    for re in res:
+        try:
+            exp_setting = f'num-iterations_{num_iterations//1000}k enhanced-splatfacto_{str(enhanced)} reset-alpha-every_{rae} refine-every_{re}'
+            num_gs = get_splat_big_num_gaussians(os.path.join(big_output_path, 'splatfacto-big bilateral_True'), exp_setting)
+            rae = reset_alpha_every_num_iterations // re
+            pipeline(path=path, exp_setting=exp_setting, tipe=tipe, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model, df=downscale_factor, num_gs=num_gs)
+        except Exception:
+            continue
