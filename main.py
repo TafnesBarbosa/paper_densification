@@ -81,12 +81,10 @@ parser.add_argument("-es", "--enhanced_splatfacto", type=bool, help="To make spl
 parser.add_argument("-cm", "--colmap_matching", type=str, help="Type of match to use in colmap", default="exhaustive")
 parser.add_argument("-ct", "--camera_type", type=str, help="Type of camera to use in colmap", default="perspective")
 parser.add_argument("-co", "--camera_optimizer", type=bool, help="If use camera optimizer during training", default=False)
-parser.add_argument("-ssa", "--stopsplitat", type=bool, help="If stop split at to the end", default=False)
 parser.add_argument("-ol", "--opacity_learning", type=float, help="Opacity learning rate to use in training", default=0.05)
-parser.add_argument("-bl", "--bilateral_learning", type=float, help="initial bilateral learning rate to use in training", default=2e-3)
-parser.add_argument("-ssf", "--scale_scheduler_final", type=float, help="Scale learning rate of scheduler to use in training", default=0.0005)
 parser.add_argument("-rae", "--reset_alpha_every", type=int, help="Number of densifications to reset opacity", default=30)
 parser.add_argument("-re", "--refine_every", type=int, help="Number of iterations to make densification", default=100)
+parser.add_argument("-mg", "--max_gaussians", type=int, help="Maximum number of mcmc gaussians", default=1000000)
 
 # Parse arguments
 args = parser.parse_args()
@@ -109,11 +107,9 @@ propert.add_property('colmap_matching', args.colmap_matching)
 propert.add_property('camera_type', args.camera_type)
 propert.add_property('camera_optimizer', args.camera_optimizer)
 propert.add_property('opacity_learning', args.opacity_learning)
-propert.add_property('bilateral_learning', args.bilateral_learning)
-propert.add_property('scale_scheduler_final', args.scale_scheduler_final)
-propert.add_property('stopsplitat', args.stopsplitat)
 propert.add_property('reset_alpha_every', args.reset_alpha_every)
 propert.add_property('refine_every', args.refine_every)
+propert.add_property('max_gaussians', args.max_gaussians)
 
 models = args.models
 
