@@ -151,5 +151,7 @@ COPY --from=builder /usr/local/bin/ns* /usr/local/bin/
 # Install nerfstudio cli auto completion
 RUN /bin/bash -c 'ns-install-cli --mode install'
 
+RUN python3 -m pip install plyfile pynvml
+
 # Bash as default entrypoint.
 CMD /bin/bash -l
