@@ -584,9 +584,13 @@ class SplatfactoModel(Model):
         rgb = torch.clamp(rgb, 0.0, 1.0)
 
         # apply bilateral grid
+        do_densification = (
+                self.step < self.config.stop_split_at
+            )
         if self.config.use_bilateral_grid and self.training:
             if camera.metadata is not None and "cam_idx" in camera.metadata:
-                rgb = self._apply_bilateral_grid(rgb, camera.metadata["cam_idx"], H, W)
+                if not do_densification:
+                    rgb = self._apply_bilateral_grid(rgb, camera.metadata["cam_idx"], H, W)
 
         if render_mode == "RGB+ED":
             depth_im = render[:, ..., 3:4]
@@ -701,11 +705,15 @@ class SplatfactoModel(Model):
                 mcmc_scale_reg = self.config.mcmc_scale_reg * torch.abs(torch.exp(self.gauss_params["scales"])).mean()
                 loss_dict["mcmc_scale_reg"] = mcmc_scale_reg
 
+        do_densification = (
+                self.step < self.config.stop_split_at
+            )
         if self.training:
             # Add loss from camera optimizer
             self.camera_optimizer.get_loss_dict(loss_dict)
             if self.config.use_bilateral_grid:
-                loss_dict["tv_loss"] = 10 * total_variation_loss(self.bil_grids.grids)
+                if not do_densification:
+                    loss_dict["tv_loss"] = 10 * total_variation_loss(self.bil_grids.grids)
 
         return loss_dict
 
