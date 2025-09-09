@@ -143,27 +143,26 @@ def reset_training(path, model):
     if os.path.exists(os.path.join(path, f'output_{model}')):
         os.system(f"rm -rf {os.path.join(path, f'output_{model}')}")
 
-def run_command(path, es: bool, rae: int, re: int, mi: int, model: str, frames_number: int):
+def run_command(path, tipe:str, es: bool, rae: int, re: int, mi: int, model: str, frames_number: int=None, df: int = 4):
     if frames_number is not None:
         if es:
-            os.system(f"python3 main.py -id {path} -cm exhaustive -df 4 -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number}")
         else:
-            os.system(f"python3 main.py -id {path} -cm exhaustive -df 4 -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -fn {frames_number}")
     else:
         if es:
-            os.system(f"python3 main.py -id {path} -cm exhaustive -df 4 -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -es {es} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model}")
         else:
-            os.system(f"python3 main.py -id {path} -cm exhaustive -df 4 -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model}")
+            os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model}")
 
-def pipeline(path, es: bool, rae: int, re: int, mi: int, output_path: str, checks: list, model: str, frames_number: int=None):
+def pipeline(path, tipe:str, es: bool, rae: int, re: int, mi: int, output_path: str, checks: list, model: str, frames_number: int=None, df: int=4):
     exp_setting = f'num-iterations_{mi//1000}k enhanced-splatfacto_{str(es)} reset-alpha-every_{rae} refine-every_{re}'
     for folder in os.listdir(path):
         try:
             folder_path = os.path.join(path, folder)
             reset_training(folder_path, model)
-            run_command(path, es, rae, re, mi, model, frames_number)
+            run_command(path, tipe, es, rae, re, mi, model, frames_number, df)
             render(folder_path, folder, checks, exp_setting, output_path, model)
-            # get_output_together(folder_path, exp_setting, output_path)
             save_metrics(folder_path, exp_setting, output_path, model)
             get_num_gaussians(folder_path, folder, checks, exp_setting, output_path, model)
             save_training_setting(folder_path, folder, exp_setting, output_path, model)
@@ -171,22 +170,40 @@ def pipeline(path, es: bool, rae: int, re: int, mi: int, output_path: str, check
             print(f'Error {e}')
         sleep(60.0 * 5.0)
 
-model = 'splatfacto-big'
-enhanced = False
-
-path = '/workspace/Documentos/teste_casa/casa'
-output_path = f'/workspace/Documentos/teste_casa/casa_opacity_jsons/{model} enhanced_{enhanced}' 
-os.makedirs(output_path, exist_ok=True)
-
+models = ['splatfacto-big', 'splatfacto-mcmc']
+enhanceds = [False, True]
 reset_alpha_every_num_iterations = 3000
+frames_numbers = [None, 500, 500]
+tipes = ['id', 'vd', 'vd']
+res = [50,100,200,300,400,500,600,700,800,900]
+downscale_factor = 4
 
 num_iterations = 30000
 checks = [*range(10000, num_iterations, 10000)]
 checks.append(num_iterations - 1)
-# checks = [10000]
 
-frames_number = 440
-# for re in [100]:
-for re in [50,100,150,200,250,300,350,400,500,600]:
-    rae = reset_alpha_every_num_iterations // re
-    pipeline(path=path, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model)
+paths = [
+    '/workspace/Documentos/teste_densification/casa',
+    '/workspace/Documentos/teste_densification/truck',
+    '/workspace/Documentos/teste_densification/train'
+]
+big_output_paths = [
+    '/workspace/Documentos/teste_densification/casa_jsons',
+    '/workspace/Documentos/teste_densification/truck_jsons',
+    '/workspace/Documentos/teste_densification/train_jsons'
+]
+
+for tipe, frames_number, path, big_output_path in zip(tipes, frames_numbers, paths, big_output_paths):
+    os.makedirs(big_output_path, exist_ok=True)
+    
+    for model in models:
+        for enhanced in enhanceds:
+            if model == 'splatfacto-mcmc' and enhanced:
+                pass
+            else:
+                output_path = os.path.join(big_output_path, f'{model} bilateral_{enhanced}') 
+                os.makedirs(output_path, exist_ok=True)
+
+                for re in res:
+                    rae = reset_alpha_every_num_iterations // re
+                    pipeline(path=path, tipe=tipe, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model, df=downscale_factor)
