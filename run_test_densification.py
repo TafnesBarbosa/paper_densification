@@ -163,18 +163,19 @@ def run_command(path, tipe:str, es: bool, rae: int, re: int, mi: int, model: str
             os.system(f"python3 main.py -{tipe} {path} -cm exhaustive -df {df} -ol 0.025 -rae {rae} -re {re} -mi {mi} -m {model} -mg {num_gs}")
 
 def pipeline(path, exp_setting: str, tipe:str, es: bool, rae: int, re: int, mi: int, output_path: str, checks: list, model: str, frames_number: int=None, df: int=4, num_gs:int = None):
-    for folder in os.listdir(path):
-        try:
-            folder_path = os.path.join(path, folder)
-            reset_training(folder_path, model)
-            run_command(path, tipe, es, rae, re, mi, model, frames_number, df, num_gs)
-            render(folder_path, folder, checks, exp_setting, output_path, model)
-            save_metrics(folder_path, exp_setting, output_path, model)
-            get_num_gaussians(folder_path, folder, checks, exp_setting, output_path, model)
-            save_training_setting(folder_path, folder, exp_setting, output_path, model)
-        except Exception as e:
-            print(f'Error {e}')
-        sleep(60.0 * 5.0)
+    if not os.path.exists(os.path.join(output_path, exp_setting)):
+        for folder in os.listdir(path):
+            try:
+                folder_path = os.path.join(path, folder)
+                reset_training(folder_path, model)
+                run_command(path, tipe, es, rae, re, mi, model, frames_number, df, num_gs)
+                render(folder_path, folder, checks, exp_setting, output_path, model)
+                save_metrics(folder_path, exp_setting, output_path, model)
+                get_num_gaussians(folder_path, folder, checks, exp_setting, output_path, model)
+                save_training_setting(folder_path, folder, exp_setting, output_path, model)
+            except Exception as e:
+                print(f'Error {e}')
+            sleep(60.0 * 5.0)
 
 enhanceds = [False, True]
 reset_alpha_every_num_iterations = 3000
@@ -208,8 +209,8 @@ for tipe, frames_number, path, big_output_path in zip(tipes, frames_numbers, pat
         os.makedirs(output_path, exist_ok=True)
 
         for re in res:
-            exp_setting = f'num-iterations_{num_iterations//1000}k enhanced-splatfacto_{str(enhanced)} reset-alpha-every_{rae} refine-every_{re}'
             rae = reset_alpha_every_num_iterations // re
+            exp_setting = f'num-iterations_{num_iterations//1000}k enhanced-splatfacto_{str(enhanced)} reset-alpha-every_{rae} refine-every_{re}'
             pipeline(path=path, exp_setting=exp_setting, tipe=tipe, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model, df=downscale_factor, num_gs=None)
     
     # Splatfacto-mcmc
@@ -219,9 +220,9 @@ for tipe, frames_number, path, big_output_path in zip(tipes, frames_numbers, pat
     os.makedirs(output_path, exist_ok=True)
     for re in res:
         try:
+            rae = reset_alpha_every_num_iterations // re
             exp_setting = f'num-iterations_{num_iterations//1000}k enhanced-splatfacto_{str(enhanced)} reset-alpha-every_{rae} refine-every_{re}'
             num_gs = get_splat_big_num_gaussians(os.path.join(big_output_path, 'splatfacto-big bilateral_True'), exp_setting)
-            rae = reset_alpha_every_num_iterations // re
             pipeline(path=path, exp_setting=exp_setting, tipe=tipe, es=enhanced, rae=rae, re=re, mi=num_iterations, output_path=output_path, checks=checks, model=model, df=downscale_factor, num_gs=num_gs)
         except Exception:
             continue

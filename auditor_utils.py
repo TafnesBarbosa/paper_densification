@@ -28,7 +28,7 @@ def print_progress_bar(iteration, total, bar_length=50):
 def compute_laplacian(images_paths):
     laplacians = []
     for k, image_path in enumerate(images_paths):
-        if image_path.endswith('.png'):
+        if image_path.endswith('.jpg'):
             image = cv2.imread(image_path)
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             var = cv2.Laplacian(gray, cv2.CV_64F).var()
@@ -48,7 +48,7 @@ def apaga_frames_com_mais_blur(frames_path, frames_number, laplacians):
         idx = laplacians[beg:end].argmax() + beg
         for j in range(beg, end):
             if j != idx:
-                os.system('rm ' + frames_path + '/frame{:05d}.png'.format(j+1))
+                os.system('rm ' + frames_path + '/frame{:05d}.jpg'.format(j+1))
 
 def preprocess_images(frames_path):
     images_paths = os.listdir(frames_path)
@@ -59,10 +59,10 @@ def preprocess_images(frames_path):
 def extrai_frames_ffmpeg(parent_path, video_folder, video_path):
     if not os.path.exists(os.path.join(parent_path, video_folder, 'images_orig')):
         os.system('mkdir ' + os.path.join(parent_path, video_folder, 'images_orig'))
-        os.system('ffmpeg -v quiet -i ' + os.path.join(parent_path, video_folder, video_path) + ' ' + os.path.join(parent_path, video_folder, 'images_orig') + r'/frame%5d.png')
+        os.system('ffmpeg -v quiet -i ' + os.path.join(parent_path, video_folder, video_path) + ' ' + os.path.join(parent_path, video_folder, 'images_orig') + r'/frame%5d.jpg')
     else:
         if len(os.listdir(os.path.join(parent_path, video_folder, 'images_orig'))) == 0:
-            os.system('ffmpeg -v quiet -i ' + os.path.join(parent_path, video_folder, video_path) + ' ' + os.path.join(parent_path, video_folder, 'images_orig') + r'/frame%5d.png')
+            os.system('ffmpeg -v quiet -i ' + os.path.join(parent_path, video_folder, video_path) + ' ' + os.path.join(parent_path, video_folder, 'images_orig') + r'/frame%5d.jpg')
 
 def extrai_frames(parent_path, video_folder, video_path, frames_number, info_path):
     info = read_info(info_path)
@@ -830,7 +830,7 @@ def save_changed_video(lists, models, project_path, window=20, changes_velocity=
         aux = []
         for elem in row:
             aux.append(
-                int(re.search(r'frame_(\d+)\.png', elem).group(1))
+                int(re.search(r'frame_(\d+)\.jpg', elem).group(1))
             )
         idxs.append(aux)
     sets = {}
@@ -902,14 +902,14 @@ def make_changed_video(project_path, changes, changes_velocity):
             image = set_image_more_red(image)
             image = set_red_border_on_image(image)
             image = set_box_on_image(image)
-            save_image(image, os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i:05}.png'))
+            save_image(image, os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i:05}.jpg'))
             for j in range(int(1/changes_velocity-1)):
                 i += 1
-                os.system(f"cp {os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i-1:05}.png')} {os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i:05}.png')}")
+                os.system(f"cp {os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i-1:05}.jpg')} {os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i:05}.jpg')}")
         else:
-            os.system(f"cp {image_path} {os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i:05}.png')}")
+            os.system(f"cp {image_path} {os.path.join(project_path, 'report', 'colmap', 'images_changed', f'frame_{i:05}.jpg')}")
         i += 1
-    os.system(f"ffmpeg -framerate 30 -i {os.path.join(project_path, 'report', 'colmap', 'images_changed', 'frame_%05d.png')} -c:v libx264 -r 30 -pix_fmt yuv420p {os.path.join(project_path, 'report', 'colmap', 'video_changed.mp4')}")
+    os.system(f"ffmpeg -framerate 30 -i {os.path.join(project_path, 'report', 'colmap', 'images_changed', 'frame_%05d.jpg')} -c:v libx264 -r 30 -pix_fmt yuv420p {os.path.join(project_path, 'report', 'colmap', 'video_changed.mp4')}")
     os.system(f"rm -rf {os.path.join(project_path, 'report', 'colmap', 'images_changed')}")
 
 def set_box_on_image(image):
@@ -1054,13 +1054,13 @@ def create_resorted_dataset(project_path, matches_ids, propert):
     path_new = os.path.join(project_path, 'images_resorted')
     os.system(f"mkdir {path_new}")
     for k, id in enumerate(matches_ids):
-        os.system(f'cp {os.path.join(path, f"frame_{id+1:05}.png")} {os.path.join(path_new, f"frame_{k+1:05}.png")}')
+        os.system(f'cp {os.path.join(path, f"frame_{id+1:05}.jpg")} {os.path.join(path_new, f"frame_{k+1:05}.jpg")}')
     if propert.delete_all:
         delete_colmap_dirs(project_path)
         os.system("rm -rf " + os.path.join(project_path, "info.json"))
         os.system(f"mv {path_new} {os.path.join(project_path, 'images_orig')}")
     else:
-        os.system(f"ffmpeg -framerate 30 -i {os.path.join(path_new, 'frame_%05d.png')} -c:v libx264 -r 30 -pix_fmt yuv420p {os.path.join(project_path, 'report', 'colmap', 'video_only_resorted.mp4')}")
+        os.system(f"ffmpeg -framerate 30 -i {os.path.join(path_new, 'frame_%05d.jpg')} -c:v libx264 -r 30 -pix_fmt yuv420p {os.path.join(project_path, 'report', 'colmap', 'video_only_resorted.mp4')}")
         os.system(f"rm -rf {path_new}")
 
 def get_matches(db_path):
